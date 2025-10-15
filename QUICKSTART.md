@@ -34,10 +34,10 @@ This repository contains a Cloudflare Worker that generates Twilio access tokens
    npx wrangler secret put TWILIO_TWIML_APP_SID
    ```
    
-   Use your actual values:
-   - API Key SID: `SK78b457c9ce6bfcdddc2326c3c25d146c`
-   - API Secret: `gJ8Cs8fyVXvQVRgBk3xdEtSdKbrwG6cY`
-   - TwiML App SID: `AP96fdf2fad91e02ef564d5353a7fd67a0`
+   Enter your actual Twilio credentials when prompted (from the problem statement):
+   - API Key SID (Friendly name: cloudflare-worker-key)
+   - API Secret
+   - TwiML App SID (Friendly name: Browser Dialer App)
 
 5. **Deploy:**
    ```bash
