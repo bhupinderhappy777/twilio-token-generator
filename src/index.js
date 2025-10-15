@@ -6,7 +6,7 @@
  */
 
 
-import { sign } from '@cfworker/jwt';
+import { JwtSigner } from '@cfworker/jwt';
 
 /**
  * Handle incoming requests
@@ -83,7 +83,7 @@ export default {
       };
 
       // Sign JWT
-      const jwt = await sign(payload, apiSecret, { algorithm: 'HS256' });
+      const jwt = await JwtSigner.sign(payload, apiSecret, { algorithm: 'HS256' });
 
       // Return the token
       return new Response(JSON.stringify({
