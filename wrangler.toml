@@ -1,4 +1,4 @@
-name = "twilio-caller-backend"
+name = "twilio-token-generator"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
