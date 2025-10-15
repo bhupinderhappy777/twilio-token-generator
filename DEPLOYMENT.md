@@ -32,17 +32,17 @@ Set your Twilio secrets using the following commands:
 ```bash
 npx wrangler secret put TWILIO_API_KEY
 ```
-When prompted, enter: `SK78b457c9ce6bfcdddc2326c3c25d146c`
+When prompted, enter your Twilio API Key (e.g., `SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 
 ```bash
 npx wrangler secret put TWILIO_API_SECRET
 ```
-When prompted, enter: `gJ8Cs8fyVXvQVRgBk3xdEtSdKbrwG6cY`
+When prompted, enter your Twilio API Secret (e.g., `your_api_secret_here`)
 
 ```bash
 npx wrangler secret put TWILIO_TWIML_APP_SID
 ```
-When prompted, enter: `AP96fdf2fad91e02ef564d5353a7fd67a0`
+When prompted, enter your TwiML App SID (e.g., `APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 
 ## Step 5: Deploy
 

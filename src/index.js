@@ -42,7 +42,7 @@ export default {
 
       // Get environment variables
       const accountSid = env.TWILIO_ACCOUNT_SID;
-      const apiKey = env.TWILIO_API_KEY || 'SK78b457c9ce6bfcdddc2326c3c25d146c';
+      const apiKey = env.TWILIO_API_KEY;
       const apiSecret = env.TWILIO_API_SECRET;
       const twimlAppSid = env.TWILIO_TWIML_APP_SID;
 

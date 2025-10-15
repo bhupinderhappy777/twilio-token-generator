@@ -40,13 +40,13 @@ TWILIO_ACCOUNT_SID = "your-account-sid"
 2. Set your Twilio secrets using Wrangler:
 ```bash
 wrangler secret put TWILIO_API_KEY
-# Enter: SK78b457c9ce6bfcdddc2326c3c25d146c
+# Enter your Twilio API Key (e.g., SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
 
 wrangler secret put TWILIO_API_SECRET
-# Enter: gJ8Cs8fyVXvQVRgBk3xdEtSdKbrwG6cY
+# Enter your Twilio API Secret
 
 wrangler secret put TWILIO_TWIML_APP_SID
-# Enter: AP96fdf2fad91e02ef564d5353a7fd67a0
+# Enter your TwiML App SID (e.g., APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
 ```
 
 ### Deployment
