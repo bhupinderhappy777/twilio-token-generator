@@ -1,0 +1,11 @@
+name = "twilio-caller-backend"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+# Add your Twilio Account SID here (non-secret)
+TWILIO_ACCOUNT_SID = "your-account-sid"
+
+# Secrets to be set via: wrangler secret put TWILIO_API_KEY
+# wrangler secret put TWILIO_API_SECRET
+# wrangler secret put TWILIO_TWIML_APP_SID
