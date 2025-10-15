@@ -1,0 +1,8 @@
+# Example environment variables for local development
+# Copy this file to .dev.vars and fill in your actual values
+# IMPORTANT: .dev.vars is in .gitignore and should NEVER be committed
+
+TWILIO_ACCOUNT_SID=your_account_sid_here
+TWILIO_API_KEY=SK78b457c9ce6bfcdddc2326c3c25d146c
+TWILIO_API_SECRET=your_api_secret_here
+TWILIO_TWIML_APP_SID=AP96fdf2fad91e02ef564d5353a7fd67a0

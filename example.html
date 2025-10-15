@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twilio Browser Dialer Example</title>
+    <script src="https://sdk.twilio.com/js/client/v1.14/twilio.min.js"></script>
+</head>
+<body>
+    <h1>Twilio Browser Dialer</h1>
+    
+    <div>
+        <input type="text" id="phoneNumber" placeholder="+1234567890" />
+        <button onclick="makeCall()">Make Call</button>
+        <button onclick="hangUp()">Hang Up</button>
+    </div>
+
+    <div id="status">Status: Not initialized</div>
+
+    <script>
+        let device;
+        let connection;
+
+        // Replace with your actual Cloudflare Worker URL
+        const WORKER_URL = 'https://your-worker-url.workers.dev';
+
+        // Initialize the Twilio Device
+        async function initDevice() {
+            try {
+                // Fetch token from your Cloudflare Worker
+                const response = await fetch(`${WORKER_URL}?identity=browser-user`);
+                const data = await response.json();
+                
+                if (!data.token) {
+                    throw new Error('No token received');
+                }
+
+                // Initialize Twilio Device with the token
+                device = new Twilio.Device(data.token);
+
+                device.on('ready', () => {
+                    updateStatus('Ready to make calls');
+                });
+
+                device.on('error', (error) => {
+                    updateStatus('Error: ' + error.message);
+                });
+
+                device.on('connect', () => {
+                    updateStatus('Call connected');
+                });
+
+                device.on('disconnect', () => {
+                    updateStatus('Call disconnected');
+                    connection = null;
+                });
+
+            } catch (error) {
+                updateStatus('Failed to initialize: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        // Make a call
+        function makeCall() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            
+            if (!phoneNumber) {
+                alert('Please enter a phone number');
+                return;
+            }
+
+            if (!device) {
+                alert('Device not initialized. Please refresh the page.');
+                return;
+            }
+
+            const params = {
+                To: phoneNumber
+            };
+
+            connection = device.connect(params);
+            updateStatus('Calling ' + phoneNumber + '...');
+        }
+
+        // Hang up the call
+        function hangUp() {
+            if (connection) {
+                connection.disconnect();
+            }
+        }
+
+        // Update status display
+        function updateStatus(message) {
+            document.getElementById('status').textContent = 'Status: ' + message;
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', initDevice);
+    </script>
+</body>
+</html>
