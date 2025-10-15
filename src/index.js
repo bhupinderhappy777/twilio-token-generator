@@ -1,135 +1,95 @@
-/**
- * Cloudflare Worker for Twilio Access Token Generation
- * 
- * This worker generates Twilio access tokens for browser-based calling.
- * It uses the Twilio SDK to create tokens with Voice grant permissions.
- */
+     // src/index.js (ES module)
+     function base64url(source) {
+       let encodedSource = btoa(String.fromCharCode(...new Uint8Array(source)));
+       encodedSource = encodedSource.replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+       return encodedSource;
+     }
 
+     async function createJWT(payload, secret) {
+       const header = { alg: 'HS256', typ: 'JWT' };
+       const encodedHeader = base64url(JSON.stringify(header));
+       const encodedPayload = base64url(JSON.stringify(payload));
+       const data = `${encodedHeader}.${encodedPayload}`;
+       const encoder = new TextEncoder();
+       const cryptoKey = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+       const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(data));
+       const encodedSignature = base64url(signature);
+       return `${data}.${encodedSignature}`;
+     }
 
-import { JwtSigner } from '@cfworker/jwt';
+     export default {
+       async fetch(request, env, ctx) {
+         const corsHeaders = {
+           'Access-Control-Allow-Origin': '*',
+           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+           'Access-Control-Allow-Headers': 'Content-Type',
+         };
 
-/**
- * Handle incoming requests
- */
-export default {
-  async fetch(request, env, ctx) {
-    // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
-      return handleCORS();
-    }
+         if (request.method === 'OPTIONS') {
+           return new Response(null, { headers: corsHeaders });
+         }
 
-    // Only allow GET and POST requests
-    if (request.method !== 'GET' && request.method !== 'POST') {
-      return new Response('Method not allowed', { 
-        status: 405,
-        headers: getCORSHeaders()
-      });
-    }
+         const url = new URL(request.url);
 
-    try {
-      // Extract identity from query params or request body
-      let identity = 'user';
-      
-      if (request.method === 'GET') {
-        const url = new URL(request.url);
-        identity = url.searchParams.get('identity') || 'user';
-      } else if (request.method === 'POST') {
-        const body = await request.json().catch(() => ({}));
-        identity = body.identity || 'user';
-      }
+         // Debug endpoint
+         if (url.pathname === '/debug') {
+           return new Response(JSON.stringify({
+             timestamp: new Date().toISOString(),
+             env_check: {
+               TWILIO_ACCOUNT_SID: env.TWILIO_ACCOUNT_SID ? 'Present' : 'MISSING',
+               TWILIO_API_KEY: env.TWILIO_API_KEY ? 'Present' : 'MISSING',
+               TWILIO_API_SECRET: env.TWILIO_API_SECRET ? 'Present' : 'MISSING',
+               TWILIO_TWIML_APP_SID: env.TWILIO_TWIML_APP_SID ? 'Present' : 'MISSING'
+             }
+           }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+         }
 
-      // Get environment variables
-      const accountSid = env.TWILIO_ACCOUNT_SID;
-      const apiKey = env.TWILIO_API_KEY;
-      const apiSecret = env.TWILIO_API_SECRET;
-      const twimlAppSid = env.TWILIO_TWIML_APP_SID;
+         // Voice webhook (TwiML for calls)
+         if (url.pathname === '/voice' && request.method === 'POST') {
+           try {
+             const formData = await request.formData();
+             const toNumber = formData.get('To') || '+12362392121'; // Default to your number
+             const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+             <Response>
+               <Dial callerId="${env.TWILIO_PHONE_NUMBER || '+12362392121'}">${toNumber}</Dial>
+             </Response>`;
+             return new Response(twiml, { headers: { 'Content-Type': 'text/xml', ...corsHeaders } });
+           } catch (error) {
+             return new Response(`<?xml version="1.0" encoding="UTF-8"?><Response><Say>Sorry, call failed.</Say></Response>`, {
+               headers: { 'Content-Type': 'text/xml', ...corsHeaders }
+             });
+           }
+         }
 
-      // Validate required environment variables
-      if (!accountSid || !apiKey || !apiSecret || !twimlAppSid) {
-        return new Response(JSON.stringify({
-          error: 'Missing required environment variables',
-          details: 'Please configure TWILIO_ACCOUNT_SID, TWILIO_API_KEY, TWILIO_API_SECRET, and TWILIO_TWIML_APP_SID'
-        }), {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            ...getCORSHeaders()
-          }
-        });
-      }
+         // Token generation (GET /)
+         try {
+           if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_API_KEY || !env.TWILIO_API_SECRET || !env.TWILIO_TWIML_APP_SID) {
+             throw new Error('Missing env vars');
+           }
 
+           const now = Math.floor(Date.now() / 1000);
+           const payload = {
+             iss: env.TWILIO_API_KEY,
+             sub: env.TWILIO_ACCOUNT_SID,
+             exp: now + 3600,
+             iat: now,
+             grants: {
+               identity: 'browser_user',
+               voice: 'true',
+               outgoing: {
+                 application_sid: env.TWILIO_TWIML_APP_SID,
+                 enabled: true
+               }
+             }
+           };
 
-      // Create Voice grant payload
-      const voiceGrant = {
-        outgoing: { application_sid: twimlAppSid },
-        incoming: { allow: true }
-      };
-
-      // Create grants object
-      const grants = {
-        identity,
-        voice: voiceGrant
-      };
-
-      // JWT payload
-      const now = Math.floor(Date.now() / 1000);
-      const payload = {
-        jti: `${apiKey}-${now}`,
-        iss: apiKey,
-        sub: accountSid,
-        exp: now + 3600, // 1 hour expiry
-        iat: now,
-        grants
-      };
-
-      // Sign JWT
-      const jwt = await JwtSigner.sign(payload, apiSecret, { algorithm: 'HS256' });
-
-      // Return the token
-      return new Response(JSON.stringify({
-        token: jwt,
-        identity: identity
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          ...getCORSHeaders()
-        }
-      });
-
-    } catch (error) {
-      console.error('Error generating token:', error);
-      return new Response(JSON.stringify({
-        error: 'Failed to generate token',
-        message: error.message
-      }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...getCORSHeaders()
-        }
-      });
-    }
-  }
-};
-
-/**
- * Get CORS headers
- */
-function getCORSHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-}
-
-/**
- * Handle CORS preflight requests
- */
-function handleCORS() {
-  return new Response(null, {
-    status: 204,
-    headers: getCORSHeaders()
-  });
-}
+           const token = await createJWT(payload, env.TWILIO_API_SECRET);
+           return new Response(JSON.stringify({ token }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+         } catch (error) {
+           return new Response(JSON.stringify({ error: error.message }), {
+             status: 500,
+             headers: { 'Content-Type': 'application/json', ...corsHeaders }
+           });
+         }
+       },
+     };
