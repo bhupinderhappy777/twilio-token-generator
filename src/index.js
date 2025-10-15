@@ -5,10 +5,8 @@
  * It uses the Twilio SDK to create tokens with Voice grant permissions.
  */
 
-import twilio from 'twilio';
 
-const AccessToken = twilio.jwt.AccessToken;
-const VoiceGrant = AccessToken.VoiceGrant;
+import { sign } from '@cfworker/jwt';
 
 /**
  * Handle incoming requests
@@ -60,25 +58,32 @@ export default {
         });
       }
 
-      // Create an access token
-      const token = new AccessToken(
-        accountSid,
-        apiKey,
-        apiSecret,
-        { identity: identity }
-      );
 
-      // Create a Voice grant for this token
-      const voiceGrant = new VoiceGrant({
-        outgoingApplicationSid: twimlAppSid,
-        incomingAllow: true
-      });
+      // Create Voice grant payload
+      const voiceGrant = {
+        outgoing: { application_sid: twimlAppSid },
+        incoming: { allow: true }
+      };
 
-      // Add the grant to the token
-      token.addGrant(voiceGrant);
+      // Create grants object
+      const grants = {
+        identity,
+        voice: voiceGrant
+      };
 
-      // Serialize the token to a JWT string
-      const jwt = token.toJwt();
+      // JWT payload
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        jti: `${apiKey}-${now}`,
+        iss: apiKey,
+        sub: accountSid,
+        exp: now + 3600, // 1 hour expiry
+        iat: now,
+        grants
+      };
+
+      // Sign JWT
+      const jwt = await sign(payload, apiSecret, { algorithm: 'HS256' });
 
       // Return the token
       return new Response(JSON.stringify({
