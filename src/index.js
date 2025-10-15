@@ -1,9 +1,19 @@
      // src/index.js (ES module)
-     function base64url(source) {
-       let encodedSource = btoa(String.fromCharCode(...new Uint8Array(source)));
-       encodedSource = encodedSource.replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
-       return encodedSource;
-     }
+    function base64url(source) {
+      let bytes;
+      if (typeof source === 'string') {
+        bytes = new TextEncoder().encode(source);
+      } else if (source instanceof ArrayBuffer) {
+        bytes = new Uint8Array(source);
+      } else if (ArrayBuffer.isView(source)) {
+        bytes = new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
+      } else {
+        throw new TypeError('Unsupported input type for base64url');
+      }
+      let encodedSource = btoa(String.fromCharCode(...bytes));
+      encodedSource = encodedSource.replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+      return encodedSource;
+    }
 
      async function createJWT(payload, secret) {
        const header = { alg: 'HS256', typ: 'JWT' };
